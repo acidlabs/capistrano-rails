@@ -10,7 +10,7 @@ git clone git@github.com:acidlabs/capistrano-rails.git cap
 cd cap
 ```
 
-Checkout the examples provided and modify them as they fits.
+Checkout the examples provided and modify them as they fit.
 
 ```bash
 cap [environment] deploy:setup
@@ -18,9 +18,11 @@ cap [environment] deploy:cold
 cap [environment] deploy
 ```
 
+where *environment* is the environment to which you're going to deploy to.
+
 ## Requirements
 
-Depending on the stack you're going to use, you've too add some gems to your project's Gemfile.
+Depending on the stack you're going to use, you've to add some gems to your project's Gemfile.
 
 ```ruby
 ## Gemfile
@@ -38,4 +40,4 @@ gem 'unicorn'
 gem 'foreman'
 ```
 
-**That's it**
+**That's it**.
