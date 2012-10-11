@@ -7,9 +7,16 @@ Capistrano ready-to-roll recipe examples for Rails with multistage support.
 ```bash
 cd /path/to/your/project
 git clone git@github.com:acidlabs/capistrano-rails.git cap
+cd cap
 ```
 
-Checkout the examples provided and modify them as it fits.
+Checkout the examples provided and modify them as they fits.
+
+```bash
+cap [environment] deploy:setup
+cap [environment] deploy:cold
+cap [environment] deploy
+```
 
 ## Requirements
 
