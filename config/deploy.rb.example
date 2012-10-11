@@ -43,13 +43,13 @@ namespace :deploy do
   desc "Create database yaml in shared path."
   task :db_configure do
     db_config = <<-EOF
-    #{rails_env}:
-    adapter: postgresql
-    database: #{application}_#{rails_env}
-      pool: 25
-    username: #{database_username}
-      password: #{database_password}
-      EOF
+      #{rails_env}:
+        adapter:  #{database_adapter}
+        database: #{application}_#{rails_env}
+        pool: 25
+        username: #{database_username}
+        password: #{database_password}
+    EOF
 
     run "mkdir -p #{shared_path}/config"
     put db_config, "#{shared_path}/config/database.yml"
