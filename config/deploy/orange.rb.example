@@ -1,0 +1,23 @@
+# Server Settings. The port is optional, default to 22.
+server "orange.acid.cl:22", :web, :app, :db, primary: true
+
+# User in the remote server. This is the user who's going to be used to deploy, and must have proper permissions.
+set :user, "awesome"
+
+# Appstage is the name you want the application to have in the server.
+# It's used to set the folder name, the upstart config and other nifty stuff.
+set :appstage, "orange"
+
+# Folder in the remote server where the revisions are going to be deployed.
+set :deploy_to, "/home/#{user}/#{appstage}"
+
+# The branch that's going to be checked out. Releases are going to be made everytime there's a new revision (+x commits ahead).
+set :branch, "orange"
+
+# Application server. Valid values are :thin and :unicorn .
+set :application_server, :unicorn
+
+# Database Settings.
+set :database_adapter,  "mysql2"
+set :database_password, "asdf1234"
+set :database_username, user

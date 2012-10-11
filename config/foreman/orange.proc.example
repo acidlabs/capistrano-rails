@@ -1,0 +1,3 @@
+web:        bundle exec unicorn -E orange -c /home/awesome/orange/current/cap/config/unicorn/staging.rb
+resque:     bundle exec rake RAILS_ENV=orange resque:work QUEUE="*"
+scheduler:  bundle exec rake RAILS_ENV=orange resque:scheduler

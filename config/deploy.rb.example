@@ -1,0 +1,185 @@
+require "bundler/capistrano"
+
+# Enable multistage.
+require "capistrano/ext/multistage"
+
+# Declare the stages. The stages should follow the names you gave them in config/environments/* .
+set :stages, %w(lemon orange)
+
+# Set the default stage
+set :default_stage, "lemon"
+
+# The application name is used to determine what repository to pull from, name databases and other nifty stuff.
+set :application, "fruit"
+
+# Use sudo when deploying the application.
+# Dunno what's default but true is evil.
+set :use_sudo, false
+
+# Hack to allow Capistrano to prompt for password.
+# Comment out if the deployer user needs a password for sudo.
+# set :sudo_prompt, ""
+
+# Choose the Source Control Management tool of your preference.
+# (Don't. Really. Use git).
+set :scm, :git
+
+# Set the repository we're going to pull from.
+# (Sorry, no multirepo, just multistage).
+set :repository,  "git@git.acid.cl:#{application}.git"
+
+# Setup the way you want the deploy to be done.
+# I sincerely suggest using :remote_cache.
+set :deploy_via, :remote_cache
+
+# Pseudo Terminals.
+# If you want Capistrano client password prompt to work this must be true.
+default_run_options[:pty] = true
+
+# Imagine you ask a friend to give you his car keys to drive it by yourself.
+ssh_options[:forward_agent] = true
+
+namespace :deploy do
+  desc "Create database yaml in shared path."
+  task :db_configure do
+    db_config = <<-EOF
+    #{rails_env}:
+    adapter: postgresql
+    database: #{application}_#{rails_env}
+      pool: 25
+    username: #{database_username}
+      password: #{database_password}
+      EOF
+
+    run "mkdir -p #{shared_path}/config"
+    put db_config, "#{shared_path}/config/database.yml"
+  end
+
+  desc "Make symlink for database yaml."
+  task :db_symlink do
+    run "ln -snf #{shared_path}/config/database.yml #{latest_release}/config/database.yml"
+  end
+
+  desc "Setup de database."
+  task :db_setup, roles: :app do
+    run [
+      "cd #{current_path}",
+      "bundle exec rake db:setup RAILS_ENV=#{rails_env}"
+    ].join(" && ")
+  end
+
+  namespace :assets do
+    desc "Assets Precompile."
+    task :precompile, roles: :web, except: { no_release: true } do
+
+      # Check if the current deploy is not the first one.
+      def not_first_deploy?
+        'true' ==  capture("if [ -e #{current_path}/REVISION ]; then echo 'true'; fi").strip
+      end
+
+      # Assets Precompile command.
+      def assets_precompile
+        run [
+          "cd #{latest_release}",
+          "#{rake} RAILS_ENV=#{rails_env} #{asset_env} assets:precompile"
+        ].join(" && ")
+      end
+
+      # If it's not the first deploy, we check whether the current revision introduces changes to the assets or not.
+      # In the case it does not, assets are not precompiled.
+      # Either in the case it does or it's the first deploy, assets are precompiled.
+      if not_first_deploy?
+        from = source.next_revision current_revision
+
+        if capture("cd #{latest_release} && #{source.local.log(from)} vendor/assets/ app/assets/ | wc -l").to_i > 0
+          assets_precompile
+        end
+      else
+        assets_precompile
+      end
+    end
+  end
+
+  # Thin processes management.
+  # TODO: Add foreman support for Thin.
+  if application_server == :thin
+    desc "Start the services."
+    task :start, roles: :app, except: { no_release: true } do
+      run [
+        "cd #{current_release}",
+        "bundle exec thin start -C ./cap/config/thin/#{rails_env}.yml"
+      ].(" && ")
+    end
+
+    desc "Stop the services."
+    task :stop, roles: :app, except: { no_release: true } do
+      run [
+        "cd #{current_release}",
+        "bundle exec thin stop -C ./cap/config/thin/#{rails_env}.yml || exit 0"
+      ].(" && ")
+    end
+
+    desc "Restart the services."
+    task :restart, roles: :app, except: { no_release: true } do
+      stop
+      start
+    end
+
+    desc "Deploys and starts a 'cold' application."
+    task :cold do
+      update
+      db_configure
+      db_symlink
+      db_setup
+      migrate
+      start
+    end
+  end
+
+  # Unicorn processes management.
+  if application_server == :unicorn
+    desc "Generates upstart from foreman procfile"
+    task :generate_upstart, roles: :app, except: { no_release: true } do
+      run [
+        "cd #{current_release}",
+        "bundle exec foreman export upstart ./cap/tmp/init -u #{user} -a #{appstage} -f ./cap/config/foreman/#{rails_env}.proc -l #{shared_path}/log"
+      ].join(" && ")
+
+      sudo "rm -f /etc/init/#{appstage}*.conf"
+      sudo "mv #{current_release}/cap/tmp/init/#{appstage}*.conf /etc/init/"
+    end
+
+    desc "Start the services."
+    task :start, roles: :app, except: { no_release: true } do
+      sudo "start #{appstage}"
+    end
+
+    desc "Stop the services."
+    task :stop, roles: :app, except: { no_release: true } do
+      sudo "stop #{appstage} || exit 0"
+    end
+
+    desc "Restart the services."
+    task :restart, roles: :app, except: { no_release: true } do
+      stop
+      generate_upstart
+      start
+    end
+
+    desc "Deploys and starts a 'cold' application."
+    task :cold do
+      update
+      db_configure
+      db_symlink
+      db_setup
+      migrate
+      generate_upstart
+      start
+    end
+  end
+end
+
+# Before hooks. You can define your own too!
+before "deploy",            "deploy:db_symlink"
+before "deploy:migrations", "deploy:db_symlink"
+before "deploy:db_setup",   "deploy:db_symlink"

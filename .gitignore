@@ -1,0 +1,5 @@
+config/*.rb
+config/deploy/*.rb
+config/foreman/*.proc
+config/thin/*.yml
+config/unicorn/*.rb
