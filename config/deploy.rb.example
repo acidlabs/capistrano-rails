@@ -60,7 +60,7 @@ namespace :deploy do
     run "ln -snf #{shared_path}/config/database.yml #{latest_release}/config/database.yml"
   end
 
-  desc "Setup de database."
+  desc "Setup the database."
   task :db_setup, roles: :app do
     run [
       "cd #{current_path}",
