@@ -104,12 +104,12 @@ namespace :deploy do
 
     desc "Stop the services."
     task :stop, roles: :app, except: { no_release: true } do
-      run "cd #{current_path} && bundle exec thin stop -C ./cap/config/thin/#{rails_env}.yml || exit 0"
+      run "cd #{current_release} && bundle exec thin stop -C ./cap/config/thin/#{rails_env}.yml || exit 0"
     end
 
     desc "Restart the services."
     task :restart, roles: :app, except: { no_release: true } do
-      run "cd #{current_path} && bundle exec thin stop -C ./cap/config/thin/#{rails_env}.yml || exit 0"
+      run "cd #{current_path} && bundle exec thin restart -C ./cap/config/thin/#{rails_env}.yml || exit 0"
     end
 
     desc "Deploys and starts a 'cold' application."
