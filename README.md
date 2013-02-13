@@ -40,4 +40,40 @@ gem 'unicorn'
 gem 'foreman'
 ```
 
+## First Deploy
+
+```bash
+cap [environment] deploy:setup
+```
+
+In the server you need to generate a ssh-key and then add it to your CVS
+```bash
+ssh-keygen
+```
+
+Clone the repository
+```bash
+cd ~/<app_directory>/releases
+git clone <repo_uri> YYYYMMDDHHmmss
+```
+
+Create a symlink for the current directory and run bundle install in it
+```bash
+cd ~/<app_directory>
+ln -s releases/YYYYMMDDHHmmss current
+cd current
+bundle install
+```
+
+Run the following commands on your local machine
+```bash
+cap [environment] deploy:db_configure
+cap [environment] deploy:db_symlink
+cap [environment] deploy:db_setup
+cap [environment] deploy:assets:precompile
+cap [environment] deploy:start
+```
+
+
+
 **That's it**.
